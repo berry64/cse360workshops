@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <script>
+            function calc(){
+                let p0 = Number(document.getElementById("p0").value);
+                let pf = Number(document.getElementById("pf").value);
+                let v0 = Number(document.getElementById("v0").value);
+                let vf = Number(document.getElementById("vf").value);
+                let t = Number(document.getElementById("time").value);
+                let t_now = Number(document.getElementById("t_now").value);
+
+                let a2 = (3*pf-3*p0-2*v0*t-vf*t)/(t*t);
+                let a3 = (2*p0+(v0+vf)*t-2*pf)/(t*t*t);
+                document.getElementById("result").value = `[${p0},${v0},${a2.toFixed(3)},${a3.toFixed(3)}]    t∈(${t_now},${t_now+t})`;
+                document.getElementById("t_now").value = t_now+t;
+                document.getElementById("p0").value = pf;
+                document.getElementById("v0").value = vf;
+                document.getElementById("pf").value = '';
+                document.getElementById("vf").value = '';
+            }
+        </script>
+    </head>
+    <body>
+        <div style="display:flex;flex-direction: column;">
+            <label>t_now</label>
+            <input id="t_now" type="text" value="">
+<label>time:</label>
+<input id="time" type="text" value="">
+<label>P0:</label>
+<input id="p0" type="text" value="">
+<label>Pf:</label>
+<input id="pf" type="text" value="">
+<label>V0:</label>
+<input id="v0" type="text" value="">
+<label>Vf:</label>
+<input id="vf" type="text" value="">
+<button id="calc" onclick="calc()">Calculate</button>
+<textarea id="result"></textarea>
+        </div>
+    </body>
+</html>

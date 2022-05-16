@@ -1,3 +1,4 @@
+from locale import currency
 import sys
 import time
 import math
@@ -5,6 +6,8 @@ import numpy as np
 from NatNetClient import NatNetClient
 from util import quaternion_to_euler_angle_vectorized1
 from Motor import *
+from Ultrasonic import *
+ultrasonic = Ultrasonic()
 PWM = Motor()
 
 import time
@@ -12,6 +15,31 @@ import time
 positions = {}
 rotations = {}    
 
+
+"""
+Function to get ultrasonic distance
+
+PARAMS:
+======
+px, py, theta
+
+RETURN:
+=======
+None if sensor reads obstacle too far away
+else: obstacle points tuple (x,y) in world frame coordinates
+
+"""
+def detectObstacle(py, px, theta):
+    data = ultrasonic.get_distance()
+    # print('Data: ', data)
+    distance = data/100 # Divide by 100 for CM
+    if distance > 10:
+        return None
+    #print("Distance =", distance)
+    obstacle = (px + distance * math.cos(theta),
+                py + distance * math.sin(theta))
+
+    return obstacle
 
 # This is a callback function that gets connected to the NatNet client. It is called once per rigid body per frame
 def receive_rigid_body_frame(robot_id, position, rotation_quaternion):
@@ -45,6 +73,10 @@ if __name__ == "__main__":
     is_running = streaming_client.run()
 
     t0 = time.time()
+
+    # store obstacles
+    obstacles = []
+    K = 0.5 # how far we want to be away from obstacle
     while is_running:
         if robot_id in positions:
 
@@ -54,10 +86,30 @@ if __name__ == "__main__":
             #position = positions[robot_id]
             rot = math.radians(rotations[robot_id])
             curpos = [positions[robot_id][0], positions[robot_id][1]]
+            obstacle = detectObstacle(curpos[0], curpos[1], rot)
+            if obstacle is not None:
+                obstacles.append(obstacle)
+
             dx = target[0] - curpos[0]
             dy = target[1] - curpos[1]
+            # add obstacle vector
+            for obstacle in obstacles:
+                # Obstacle avoidance vector
+                errpbx = curpos[0] - obstacle[0]
+                errpby = curpos[1] - obstacle[1]
+                # Calculate norm-3
+                pbnorm3 = math.sqrt(errpbx**2 + errpby**2)**3
+                # Divide by norm 3 and multiply by distance constant K
+                errpbx = (errpbx / pbnorm3) * K
+                errpby = (errpby / pbnorm3) * K
+
+                # add obstacle avoidance vector
+                dx = dx + errpbx
+                dy = dy + errpby
 
             if(time.time() - t0 > 10):
+                # NB: the rescue circle is centered at (5.43, 0)
+                # Prolly change here? test tomorrow
                 target = [0,0]
             
             targetrot = math.atan2(dy,dx)
